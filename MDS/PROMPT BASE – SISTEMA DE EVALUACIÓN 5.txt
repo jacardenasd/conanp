@@ -1,0 +1,114 @@
+CONTEXTO (09.FEB.2026) — PROBLEMA PERSISTENTE
+Sistema: SED – Evaluación del Desempeño 2025 / Captura de Metas 2026
+Situación: “Siguen presentándose errores” y “muchos cambios no se ven reflejados”.
+Esto indica: lógica aplicada solo en UI, consultas incorrectas en descargas, estatus no persistidos, caché/datos heredados por carga masiva antigua, y/o inconsistencias en datos (usuarios sin configuración actual).
+
+OBJETIVO
+1) Aplicar los cambios pendientes (según comentarios 09.02.2026).
+2) Corregir causa raíz del “no se refleja”: forzar que el sistema lea configuración/relaciones actuales y que los módulos recalculen estatus.
+3) Implementar un “modo reparación” para recalcular y/o re-sincronizar datos de usuarios (por carga masiva) para que la Cédula y semáforos cuadren con la evaluación real.
+
+REGLAS GENERALES OBLIGATORIAS
+- Todo bloqueo/permiso debe ser SERVER-SIDE (rechazar POST/UPDATE/DELETE).
+- Toda descarga (cédulas/Excel) debe filtrar por PERIODO + UA/Regional + rol asignado, sin cruces.
+- Todo “Finalizar/Terminar” debe persistir en BD con un flag y debe bloquear edición.
+- Todo cambio de estado debe recalcular semáforos/puntajes desde BD (no por sesión/memoria).
+- No permitir “editar estructura” (instrumento/unidad de medida) durante EVALUACIÓN.
+- Implementar logs y manejo de errores (NO fatal error).
+
+========================================================
+A) METAS COLECTIVAS — PERIODO DE CAPTURA
+========================================================
+A1) Cédula con “Denominación del Puesto” incorrecta (solo en descarga)
+Síntoma: en el sistema (superadmin) el Evaluador Directivo sí tiene el puesto correcto, pero la cédula descargada muestra otro puesto.
+Acción:
+- Ubicar el generador de cédula de metas colectivas (Excel/PDF) y corregir el origen del dato “Denominación del Puesto del Evaluador Directivo”.
+- En la cédula, la denominación debe provenir del puesto ACTUAL del evaluador directivo asignado en la configuración vigente (misma fuente que ve superadmin).
+- Revisar joins: evitar tomar el puesto del titular de UA u otro usuario por error.
+- Validar que el id_usuario evaluador consultado sea el correcto (asignación UA→Evaluador Directivo).
+
+========================================================
+B) METAS COLECTIVAS — PERIODO DE EVALUACIÓN
+========================================================
+B1) Bloquear edición: solo permitir evaluar (cambio pendiente)
+Síntoma: aún se puede editar “Instrumento” y “Unidad de Medida”.
+Acción:
+- si el periodo está en evaluación:
+  - Deshabilitar UI (inputs readonly/disabled).
+  - Permitir solo guardar evaluación/calificación.
+- Si hay endpoints genéricos de update, agregar validación: if periodo=EVALUACION => reject con mensaje.
+
+========================================================
+C) METAS INDIVIDUALES — PERIODO DE EVALUACIÓN
+========================================================
+C1) Bloquear “Unidad de Medida” cuando evalúe el Superior (cambio pendiente)
+Síntoma: Superior jerárquico aún puede editar “Unidad de Medida”.
+Acción:
+- En la vista/handler de evaluación por superior:
+  - Unidad de medida debe ser solo lectura.
+  - Backend: rechazar UPDATE a unidad_medida en periodo de evaluación.
+- Asegurar que el evaluado tampoco pueda modificar unidades de medida en evaluación (si existe esa ruta).
+
+========================================================
+D) AUTOEVALUACIÓN GERENCIAL (REGLA COMPLETA 09.02.2026)
+========================================================
+D1) Bloqueo al evaluado después de Guardar
+- Una vez que la persona evaluada GUARDÓ su autoevaluación:
+  - ya NO puede editarla.
+- Implementar flag persistente: autoeval_guardada=1 (usuario+periodo).
+- UI: ocultar/deshabilitar edición.
+- Backend: rechazar updates si autoeval_guardada=1.
+
+D2) Superior ve respuestas del evaluado + puede modificar + guarda nuevas respuestas
+- El superior jerárquico debe:
+  - visualizar respuestas propuestas por el evaluado (prellenadas/seleccionadas).
+  - modificar y guardar nuevas respuestas.
+- Persistencia:
+  - guardar respuestas del superior (detalle por reactivo/criterio).
+  - guardar calificación y porcentaje final (los que se usarán en Cédula).
+  - al reabrir, deben verse marcadas las respuestas guardadas del superior.
+
+D3) Al evaluar (superior) se finaliza el proceso
+- Cuando el superior termine/guarde como final:
+  - marcar autoevaluación como FINALIZADA.
+  - bloquear cualquier edición posterior (evaluado y superior).
+- Persistir flag: autoeval_finalizada=1 (usuario+periodo).
+- Semáforos: actualizar a “Evaluado/Finalizado”.
+
+========================================================
+E) APORTACIONES DESTACADAS Y ACTIVIDADES EXTRAORDINARIAS
+========================================================
+E1) Agregar botón “Terminar” en Aportaciones Destacadas (nuevo requerimiento) 
+- Añadir botón “Terminar” en Aportaciones Destacadas para el jefe inmediato al momento de validarlas
+- Asegurar que en Actividades Extraordinarias pase la misma lógica.
+- Comportamiento:
+  - al “Terminar” la validación (por superior jerarquico), ya no se pueden editar registros.
+  - el avance/semáforo del evaluado debe reflejarlo correctamente.
+
+IMPORTANTE:
+- Este requerimiento contradice versiones previas donde se pedía quitar “Terminar” en Actividades Extraordinarias.
+- Implementar EXACTAMENTE lo pedido en 09.02.2026:
+  - agregar “Terminar” en Aportaciones Destacadas pero solo cuando el jefe inmediato esta validando, no en capturar mis Aportaciones Destacadas.
+
+
+========================================================
+CHECKLIST (OBLIGATORIO PARA CERRAR)
+========================================================
+1) Cédula Metas Colectivas (captura):
+   - Denominación del puesto del Evaluador Directivo correcta.
+2) Metas Colectivas (evaluación):
+   - NO permite editar instrumento ni unidad de medida (UI + backend).
+3) Metas Individuales (evaluación):
+   - Superior NO puede editar unidad de medida (UI + backend).
+4) Autoevaluación:
+   - Evaluado guarda y ya no edita.
+   - Superior ve respuestas del evaluado, guarda nuevas respuestas.
+   - Al finalizar superior: proceso bloqueado y calificación/porcentaje final se usan en Cédula.
+5) Aportaciones Destacadas:
+   - Existe botón “Terminar”, bloquea edición al finalizar y actualiza semáforo.
+6) Cédula/Configuraciones:
+   - Ejecutar “Re-sincronizar usuarios” y “Recalcular semáforos”.
+   - Verificar que los cambios sí se reflejan sin necesidad de manipulación manual.
+
+FUENTE DE REQUERIMIENTOS
+Documento “Comentarios SED_09.02.2026”.

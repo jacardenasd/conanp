@@ -1,0 +1,195 @@
+CONTEXTO CRÍTICO
+Sistema: Sistema de Evaluación del Desempeño (SED)
+Periodos: Evaluación 2025 y Captura de Metas 2026
+Problema reportado por el cliente: 
+“Muchos cambios solicitados NO se ven reflejados en el sistema, existen inconsistencias entre lo que se muestra en pantalla, los semáforos, las descargas y la información realmente guardada en base de datos.”
+
+OBJETIVO
+Realizar una revisión exhaustiva (auditoría funcional + técnica) de los módulos indicados, identificar por qué los cambios no se reflejan y corregir:
+- validaciones incompletas
+- lógica duplicada o contradictoria
+- estatus que no se recalculan
+- consultas que traen información incorrecta
+- flujos que aparentan estar terminados pero no lo están en BD
+
+NO asumir que lo ya programado funciona. Verificar y corregir.
+
+=====================================================
+INSTRUCCIÓN GENERAL PARA COPILOT
+=====================================================
+1) Revisar código + base de datos + vistas.
+2) Verificar que TODA acción visible tenga persistencia correcta en BD.
+3) Verificar que TODO estatus visible (semáforo, validado, evaluado, pendiente) se calcule desde BD y no solo desde front.
+4) Donde existan cálculos, sumatorias o estatus, recalcular siempre después de:
+   - alta
+   - edición
+   - eliminación
+   - validación por superior
+5) Si existe lógica repetida en varios archivos, unificar o corregir todas las ocurrencias.
+6) Agregar logs o comentarios donde se corrijan errores críticos.
+
+=====================================================
+A) METAS COLECTIVAS – PERIODO DE CAPTURA
+=====================================================
+A1. Descarga incorrecta de cédulas
+- Al descargar cédulas de Metas Colectivas:
+  - Se están descargando cédulas de OTRA regional.
+  - La denominación del puesto es incorrecta.
+- Revisar:
+  - joins por Unidad Administrativa / Regional
+  - filtros por usuario evaluador directivo
+  - uso correcto del periodo
+- Corregir para que cada Evaluador Directivo descargue SOLO la cédula correspondiente a su regional y puesto correcto.
+
+A2. Vista de control para Super Administrador
+- Crear o habilitar un apartado para Super Administrador donde pueda:
+  - Ver listado resumido de Evaluadores Directivos por Unidad Administrativa
+  - Validar o reasignar evaluadores si es necesario
+- Esta vista es solo de administración, no de evaluación.
+
+A3. Botones faltantes
+- Agregar botón “Borrar” en Metas Colectivas (para recaptura).
+- Agregar botón “Finalizar carga”.
+- Ambos deben:
+  - actualizar estatus en BD
+  - reflejarse inmediatamente en UI y semáforos
+
+=====================================================
+B) METAS COLECTIVAS – PERIODO DE EVALUACIÓN
+=====================================================
+B1. Bloqueo de edición
+- Una vez iniciado el periodo de evaluación:
+  - Las Metas Colectivas NO deben poder editarse.
+  - Únicamente deben poder evaluarse.
+- Implementar validación server-side (no solo ocultar botones).
+
+B2. Inconsistencia con Cédula de Evaluación
+- Problema crítico:
+  - El evaluador directivo ya evaluó.
+  - El semáforo del usuario aparece como “Calificado”.
+  - PERO el sistema no permite descargar la Cédula porque “aún está pendiente”.
+- Revisar:
+  - condición real que habilita descarga
+  - estatus que se está evaluando
+- Corregir para que:
+  - si Metas Colectivas están evaluadas en BD, se consideren completas para la Cédula.
+
+=====================================================
+C) METAS INDIVIDUALES – PERIODO DE CAPTURA
+=====================================================
+- Una vez que el evaluado:
+  - carga metas individuales firmadas
+  - da clic en “Finalizar”
+- Debe quedar TOTALMENTE bloqueado:
+  - editar
+  - borrar
+  - agregar nuevas metas
+- Esto debe cumplirse incluso si el sistema cambia a periodo de evaluación.
+- Implementar flag persistente en BD y validación server-side.
+
+=====================================================
+D) METAS INDIVIDUALES – PERIODO DE EVALUACIÓN
+=====================================================
+D1. Reflejo correcto al evaluado
+- Cuando el superior jerárquico valida o modifica resultados:
+  - El evaluado debe ver el resultado FINAL (no su propuesta).
+- Revisar consultas y fuentes de datos de la vista del evaluado.
+
+D2. Bloqueo de unidades de medida
+- Cuando el evaluado entra a proponer evaluación:
+  - Bloquear modificación de unidades de medida.
+- Validar tanto en UI como en servidor.
+
+=====================================================
+E) AUTOEVALUACIÓN GERENCIAL
+=====================================================
+E1. Fatal error al Guardar (CRÍTICO)
+- Al guardar la Autoevaluación Gerencial aparece un fatal error.
+- Diagnosticar y corregir:
+  - variables indefinidas
+  - queries incorrectos
+  - columnas inexistentes
+- El error impide que el Superior Jerárquico vea la autoevaluación.
+
+E2. Guardado incompleto por parte del Superior
+- El Superior puede evaluar.
+- Se muestra la calificación.
+- PERO:
+  - NO se guardan las respuestas que dio.
+- Corregir persistencia:
+  - guardar respuestas
+  - guardar calificación final
+  - guardar usuario, fecha y periodo
+
+E3. Flujo correcto
+- El Superior debe poder:
+  - validar o modificar una vez
+  - finalizar
+- Después de finalizar:
+  - bloquear cualquier modificación
+- La calificación válida es la del Superior y debe reflejarse en semáforos.
+
+E4. Restricción por periodo
+- La Autoevaluación Gerencial solo puede realizarse en periodo de evaluación.
+- Bloquear en otros periodos con validación server-side.
+
+=====================================================
+F) APORTACIONES DESTACADAS Y ACTIVIDADES EXTRAORDINARIAS
+=====================================================
+F1. Error al validar por el Superior
+- Al validar/revisar aparece un error.
+- Identificar causa y corregir.
+
+F2. Eliminación sin recalcular semáforo (CRÍTICO)
+- Al eliminar actividades o aportaciones:
+  - el semáforo sigue como “Validado/Evaluado”
+  - la sumatoria de puntos (+1, +2) permanece
+- Corregir para que:
+  - se recalculen estatus
+  - se recalculen puntajes
+  - se actualice vista del evaluado y del superior
+
+F3. Edición durante evaluación
+- El evaluado debe poder:
+  - editar
+  - eliminar
+- SOLO mientras el superior NO haya validado.
+- Bloquear inmediatamente después de la validación.
+
+F4. Eliminar botón “Terminar”
+- Eliminar botón “Terminar” en Actividades Extraordinarias.
+- Usar lógica similar a Aportaciones Destacadas:
+  - validación del superior = bloqueo definitivo.
+
+=====================================================
+G) DESCARGA DE CÉDULA DE EVALUACIÓN
+=====================================================
+G1. Descarga parcial correcta
+- Al descargar la Cédula:
+  - solo deben reflejarse las calificaciones que existan
+  - no forzar secciones sin datos
+- Revisar por qué actualmente no se logra concluir el proceso.
+
+G2. Reglas claras
+- Requisito para descargar:
+  - Metas Individuales evaluadas
+  - Metas Colectivas evaluadas
+  - Autoevaluación Gerencial evaluada
+- NO bloquear por:
+  - Capacitación
+  - Actividades Extraordinarias
+  - Aportaciones Destacadas
+
+=====================================================
+ENTREGABLE ESPERADO
+=====================================================
+- Código corregido donde los cambios SÍ se reflejen en:
+  - UI
+  - BD
+  - semáforos
+  - descargas
+- Eliminación de inconsistencias visibles para el cliente.
+- Sistema alineado al comportamiento real esperado.
+
+Fuente de requerimientos:
+Documento de comentarios del SED – versión 05.02.2026.

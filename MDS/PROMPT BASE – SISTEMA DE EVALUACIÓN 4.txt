@@ -1,0 +1,230 @@
+CONTEXTO (CRÍTICO)
+Sistema: SED – Evaluación del Desempeño 2025 / Captura de Metas 2026
+Cliente reporta: “Siguen presentándose errores y muchos cambios NO se ven reflejados”.
+Objetivo: No solo “hacer cambios”, sino corregir las causas raíz: filtros incorrectos por regional/UA, estatus que no se persisten, controles solo visuales (front) sin validación server-side, recalculo de semáforos inexistente, y descargas Excel corruptas/invalidas.
+
+INSTRUCCIONES PARA COPILOT (OBLIGATORIAS)
+1) NO asumir que el cambio ya está implementado. Auditar código y BD.
+2) Todo bloqueo/permiso debe ser server-side (rechazar POST), no solo ocultar botones.
+3) Toda acción que cambie estado (guardar, finalizar, validar, borrar) debe:
+   - Persistir estado en BD
+   - Recalcular semáforos/puntajes
+   - Refrescar vistas correctas para evaluado y superior
+4) Buscar duplicidad de lógica por periodo (2025/2026) y unificar.
+5) Agregar manejo de errores: try/catch + mensajes controlados, no “fatal error”.
+6) Corregir y probar con checklist al final.
+
+========================================================
+A) METAS COLECTIVAS – PERIODO DE CAPTURA
+========================================================
+A1) Descarga incorrecta de cédulas por regional (BUG GRAVE)
+- Síntoma: Evaluador Directivo descarga cédula de otra Regional y puesto incorrecto.
+- Acción:
+  - Revisar query de descarga (joins y filtros).
+  - Asegurar filtro por:
+    - periodo seleccionado
+    - unidad_administrativa_id / regional_id correspondiente
+    - evaluador_directivo asignado a esa UA
+  - Corregir denominación del puesto: debe venir del puesto real asociado al evaluador o al titular según diseño, NO de otro registro.
+  - Prohibir “cédula cruzada”: si el evaluador no está asignado a esa UA/regional, denegar.
+
+A3) Botón “Finalizar carga” (Metas Colectivas)
+- Agregar botón “Finalizar carga” en Metas Colectivas (captura).
+- puede cargar PDFs mientras no haya dado clic en “Finalizar carga”. 
+- Al clic en finalizar carga:
+  - Bloquear altas/ediciones/borrados (server-side) para ese periodo/UA.
+  - Guardar flag en BD: metas_colectivas_finalizadas=1 (por UA y periodo).
+  - Semáforo: actualizar estado a “Captura finalizada” (o equivalente).
+
+========================================================
+B) METAS COLECTIVAS – PERIODO DE EVALUACIÓN
+========================================================
+B1) Bloquear edición total, permitir SOLO evaluar
+- Síntoma: en evaluación aún permite editar “Instrumento” y “Unidad de Medida”. 
+- Acción:
+  - En periodo de evaluación, deshabilitar UI + RECHAZAR en backend cualquier POST/UPDATE a:
+    - instrumento
+    - unidad_medida
+    - redacción/meta/ponderación y demás campos
+  - Permitir únicamente registrar evaluación/calificación.
+  - Si existe endpoint genérico de “update meta colectiva”, agregar validación por periodo y rol.
+
+========================================================
+C) METAS INDIVIDUALES – PERIODO DE CAPTURA
+========================================================
+C1) Botón “Finalizar la carga” tras subir firmadas
+- Requisito: tras cargar metas firmadas debe aparecer:
+  - Botón “Borrar” (para archivo)
+  - Botón “Finalizar la carga”
+- Al Finalizar la carga:
+  - Bloquear edición/borrado/alta de metas individuales (server-side) para usuario+periodo.
+  - Persistir flag: metas_ind_finalizadas=1 (por usuario y periodo)
+  - Este bloqueo debe mantenerse aunque el sistema cambie a periodo de evaluación.
+
+========================================================
+D) METAS INDIVIDUALES – PERIODO DE EVALUACIÓN
+========================================================
+D1) Bloquear modificación de Unidad de Medida (evaluado)
+- Síntoma: el evaluado, al proponer evaluación, puede modificar “Unidad de Medida”.
+- Acción:
+  - En evaluación, al entrar a proponer calificación, todos los campos de la meta deben estar en modo lectura.
+  - Backend: rechazar cualquier UPDATE a unidad_medida en evaluación, independientemente de UI.
+
+D2) Bloquear modificación de Unidad de Medida (superior)
+- Síntoma: el superior jerárquico al evaluar también puede editar unidad de medida.
+- Acción:
+  - Igual que D1: en evaluación solo se edita “resultado/calificación”, no la estructura de la meta.
+  - Backend: rechazar cualquier UPDATE a unidad_medida, instrumento, ponderación.
+
+D3) Reflejar resultado del Superior al evaluado + nueva columna
+- Requisito: en vista del evaluado, agregar columna:
+  “Resultado por el Superior Jerárquico”
+- Estructura esperada:
+  Meta Individual | Unidad de Medida | Ponderación | Resultado (Evaluado) | Resultado por el Superior Jerárquico | Acciones
+- Acción:
+  - Guardar resultado final del superior en BD (campo dedicado).
+  - Vista del evaluado:
+    - mostrar su propuesta en “Resultado (Evaluado)”
+    - mostrar el valor final del superior en la nueva columna
+  - Si el superior no ha evaluado aún, mostrar “Pendiente” o vacío.
+
+========================================================
+E) AUTOEVALUACIÓN GERENCIAL (CRÍTICO)
+========================================================
+E1) Fatal error al Guardar (evaluado)
+- Síntoma: al guardar autoevaluación aparece fatal error y el superior no ve nada.
+- Acción:
+  - Localizar handler de guardado (POST).
+  - Corregir causa raíz (variables indefinidas, query, columna, null, etc.).
+  - Envolver en try/catch y registrar error en log.
+  - Responder con mensaje controlado al usuario (sin fatal).
+
+E2) Superior no puede visualizar la autoevaluación que el usuario capturó
+- Tras corregir guardado, asegurar que:
+  - Existe registro en BD para usuario/periodo.
+  - La vista del superior filtra correctamente por sus subordinados y periodo.
+  - Permisos correctos (jefe_id, adscripción/unidad si aplica).
+
+E3) No se guardan respuestas del superior (solo se ve calificación)
+- Síntoma: el superior evalúa, se ve calificación, pero las respuestas no se guardan o no se marcan al consultarlas.
+- Acción:
+  - Persistir respuestas del superior por reactivo/criterio (tabla detalle).
+  - Al reabrir la evaluación, las opciones deben aparecer marcadas con lo guardado.
+  - Guardar también calificación final validada.
+
+E4) Finalizar = bloqueo definitivo (superior)
+- Permitir que el superior valide/modifique mientras no finalice.
+- Una vez finalice:
+  - bloquear cambios
+  - guardar flag: autoeval_ger_finalizada=1 (usuario+periodo)
+  - calificación válida = la del superior
+  - reflejar en semáforos
+
+E5) Restricción por periodo
+- Autoevaluación gerencial solo en PERIODO DE EVALUACIÓN.
+- Bloquear intento en otros periodos (server-side + UI).
+
+E6) Bug: no se guarda calificación (impide proceso)
+- Asegurar que al finalizar:
+  - calificación final se guarda en BD
+  - semáforo se actualiza
+  - cédula pueda considerar la sección como cumplida
+
+========================================================
+F) APORTACIONES DESTACADAS Y ACTIVIDADES EXTRAORDINARIAS
+========================================================
+F1) Error al validar/revisar (superior)
+- Síntoma: al intentar validar aparece error.
+- Acción:
+  - Encontrar endpoint/handler de validación.
+  - Corregir query/permiso/nulos.
+  - Manejo de errores controlado + log.
+
+F2) Eliminación NO recalcula semáforo/puntaje (BUG GRAVE)
+- Síntoma: se eliminan registros pero:
+  - semáforo sigue “Validadas”
+  - superior los ve “Evaluadas”
+  - puntaje (+1/+2) permanece
+- Acción:
+  - Al eliminar: recalcular puntaje total del usuario/periodo.
+  - Recalcular estatus:
+    - si no hay registros → “Sin registro / En captura”
+    - si hay registros no validados → “Pendiente”
+    - si validados → “Validado”
+  - Aplicar en vista del evaluado y del superior.
+
+F3) Edición/eliminación durante evaluación hasta validación
+- Requisito:
+  - En evaluación, el evaluado puede editar/eliminar mientras NO esté validado por el superior.
+  - Al validar, bloquear.
+- Acción:
+  - Agregar flag validado_por_superior (por registro) si no existe.
+  - Validación server-side para bloquear updates/deletes cuando validado=1.
+
+F4) Eliminar botón “Terminar” en Actividades Extraordinarias
+- Quitar botón.
+- Mecanismo: solo bloqueo por validación del superior (igual que aportaciones).
+
+========================================================
+G) DESCARGA DE CÉDULA DE EVALUACIÓN / EXCEL
+========================================================
+G1) Descarga ya permite, pero Excel no abre (archivo inválido/corrupto)
+- Síntoma: al abrir Excel marca error (archivo dañado o formato incorrecto).
+- Acción:
+  - Revisar generación de Excel:
+    - headers correctos (Content-Type, Content-Disposition)
+    - no imprimir espacios/HTML/errores antes del output
+    - limpiar buffers (ob_start/ob_end_clean)
+    - no warnings/notices antes del stream
+  - Asegurar que se genera un .xlsx válido (PhpSpreadsheet):
+    - usar writer Xlsx
+    - no mezclar echo con salida binaria
+  - Probar descarga en ambiente limpio.
+
+G2) Contenido de cédula: solo calificaciones correspondientes
+- Al descargar, incluir solo calificaciones existentes.
+- No bloquear ni forzar secciones opcionales.
+- Si falta información necesaria, mostrar mensaje claro.
+
+========================================================
+CHECKLIST DE PRUEBA (OBLIGATORIO)
+========================================================
+1) Metas Colectivas:
+   - Captura: finalizar carga existe, persiste y bloquea edición.
+   - Evaluación: NO permite editar instrumento/unidad medida.
+   - Descarga cédula: evaluador directivo no obtiene otra regional.
+2) Metas Individuales:
+   - Captura: después de subir firmadas aparece “Finalizar carga”; al finalizar bloquea CRUD siempre.
+   - Evaluación: evaluado y superior NO pueden editar unidad de medida.
+   - Vista evaluado: aparece columna “Resultado por el Superior Jerárquico”.
+3) Autoevaluación Gerencial:
+   - Evaluado guarda sin fatal error.
+   - Superior visualiza.
+   - Respuestas del superior se guardan y al reabrir están marcadas.
+   - Finalizar bloquea y semáforo actualiza.
+4) Actividades/Aportaciones:
+   - Superior valida sin error.
+   - Eliminar recalcula semáforo y puntaje.
+   - Evaluado puede editar/eliminar hasta validación.
+   - No existe botón “Terminar”.
+5) Cédula/Excel:
+   - Descarga abre sin error en Excel.
+   - Refleja solo calificaciones que correspondan.
+
+FUENTE
+Requerimientos del documento “Comentarios SED 06.02.2026”.
+
+
+
+Resultado por el Superior Jerárquico
+
+
+este cambio no se tenia que aplicar: 
+F4) Eliminar botón “Terminar” en Actividades Extraordinarias
+- Quitar botón.
+- Mecanismo: solo bloqueo por validación del superior (igual que aportaciones).
+
+En su lugar, dejar el botón y cuando se de clic en él, ya no permitir la edición. 
+Eso debería pasar igual que en aportaciones destacadas
+
+

@@ -1,0 +1,197 @@
+PROMPT DE CORRECCIONES – GITHUB COPILOT CHAT
+SED CONANP – Ajustes solicitados por el cliente (Enero 2026)
+
+Rol:
+Actúa como Desarrollador Senior PHP 8 responsable de corregir y ajustar funcionalidades existentes del Sistema de Evaluación del Desempeño (SED) CONANP. No rehagas el sistema ni cambies la arquitectura. Respeta la base de datos, los nombres de tablas, campos, archivos y la lógica institucional ya implementada.
+
+Instrucción general:
+Trabaja únicamente sobre las correcciones solicitadas por el cliente. No agregues nuevas funcionalidades fuera de este alcance. Todas las reglas deben considerar rol del usuario, periodo de evaluación y estatus del periodo (captura, evaluación, cerrado).
+
+INICIO – Avance de Evaluación
+
+Mostrar el recuadro “Avance de Evaluación” únicamente a:
+
+Personal SPC
+
+Personal de Primer Nivel de Ingreso
+
+Ocultar este recuadro para cualquier otro tipo de usuario.
+
+El personal de Primer Nivel de Ingreso debe tener acceso a todas las secciones, igual que SPC.
+
+Verificar y corregir la correcta asignación del tipo_usuario.
+
+CAPACITACIÓN – Control por periodo
+Periodo 2025:
+
+Bloquear completamente:
+
+Registro de cursos
+
+Carga de constancias
+Motivo: la capacitación 2025 se cargará de forma masiva.
+
+Periodo 2026 en adelante:
+
+Permitir registro y carga normal.
+
+Reglas adicionales:
+
+No permitir registrar capacitación en periodo de evaluación.
+
+Solo permitir registro en periodo de captura.
+
+Agregar función para que el Super Administrador pueda quitar la validación (validado = 0) a cursos validados por error.
+
+METAS COLECTIVAS
+Periodo 2025:
+
+Bloquear completamente la captura.
+
+Permitir solo evaluación (cuando aplique).
+
+Cargar metas desde el sistema anterior.
+
+Periodo 2026:
+
+Corregir error de cruce de periodos: las metas 2026 no deben guardarse ni visualizarse en 2025.
+
+En periodo de evaluación:
+
+Permitir solo evaluar.
+
+No permitir editar instrumento ni unidad de medida.
+
+Para el Super Administrador:
+
+Corregir la visualización por año; las metas deben filtrarse correctamente por periodo.
+
+METAS INDIVIDUALES FIRMADAS (PDF)
+
+Al cargar el PDF:
+
+Mostrar botón FINALIZAR.
+
+Bloquear edición y eliminación posteriores.
+
+En la Cédula de Metas Individuales (Excel):
+
+Mostrar el porcentaje total de ponderación.
+
+El Super Administrador debe poder:
+
+Reabrir el registro.
+
+Modificar.
+
+Eliminar.
+
+Habilitar una nueva carga, aun cuando el usuario haya finalizado.
+
+MI EVALUACIÓN – Actividades Extraordinarias y Aportaciones Destacadas
+
+El usuario puede registrar.
+
+El Superior Jerárquico debe poder validar o rechazar.
+
+Una vez validadas por Superior Jerárquico y RH:
+
+Bloquear edición.
+
+Sumar al avance de evaluación.
+
+Cambiar el color del semáforo.
+
+El Super Administrador debe poder modificar el estatus de validación tanto de RH como del Superior Jerárquico.
+
+MIS COLABORADORES – Metas Individuales
+Flujo correcto:
+
+Usuario propone calificación y da TERMINAR.
+
+Se bloquea su edición.
+
+El Superior Jerárquico valida o ajusta calificaciones y da TERMINAR.
+
+Se bloquea definitivamente el proceso.
+
+Correcciones:
+
+Evitar que el botón TERMINAR vuelva a aparecer al usuario.
+
+Evitar que el Superior Jerárquico pueda reevaluar sin autorización.
+
+Las calificaciones finales deben reflejarse correctamente al usuario evaluado.
+
+El Super Administrador puede reabrir el proceso cuando sea necesario.
+
+AUTOEVALUACIÓN GERENCIAL
+
+Mostrar correctamente los comportamientos asociados.
+
+Una vez validada por el Superior Jerárquico:
+
+Bloquear edición.
+
+Crear una vista para que el Super Administrador pueda consultar la autoevaluación gerencial de cada usuario.
+
+Ajustar el semáforo:
+
+No mostrar avance ni propuesta si el usuario no capturó calificación.
+
+DESCARGA DE CÉDULA DE EVALUACIÓN DEL DESEMPEÑO
+
+Mostrar el botón “Descargar Cédula de Evaluación del Desempeño” cuando:
+
+Metas Individuales estén evaluadas.
+
+Metas Colectivas estén evaluadas.
+
+Autoevaluación Gerencial esté evaluada.
+
+No debe ser obligatorio:
+
+Registrar capacitación.
+
+Registrar actividades extraordinarias.
+
+Registrar aportaciones destacadas.
+
+PRIMER NIVEL DE INGRESO
+
+Tratar exactamente igual que el personal SPC:
+
+Acceso.
+
+Secciones.
+
+Evaluaciones.
+
+Corregir la asignación del tipo de usuario.
+
+SEMÁFOROS
+
+Verificar que el color refleje el avance real.
+
+Corregir la Autoevaluación Gerencial que muestra avance sin captura.
+
+Cada sección debe impactar el semáforo solo cuando esté correctamente validada.
+
+PERFIL – MIS DATOS
+
+Bloquear todos los datos generales excepto:
+
+Nivel de estudios.
+
+Jefe inmediato (una vez seleccionado debe bloquearse).
+
+El Super Administrador puede modificar o autorizar cambios.
+
+Corregir niveles de puesto (no todos deben aparecer como “Comisionado”).
+
+Mostrar siempre la nota:
+“En caso de identificar alguna corrección en los datos generales, envía un correo a capacitacion@conanp.gob.mx
+”.
+
+Criterio final:
+No agregar funcionalidades fuera de estas instrucciones. Mantener el diseño visual (Limitless). Priorizar control de flujo, bloqueos correctos, trazabilidad y cumplimiento institucional.

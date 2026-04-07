@@ -1,0 +1,162 @@
+OBJETIVO
+Aplicar cambios funcionales al Sistema de Evaluación del Desempeño (SED) para asegurar el correcto funcionamiento de la Evaluación 2025 y Captura de Metas 2026. Implementar validaciones, reglas de negocio, bloqueo/desbloqueo de edición, persistencia correcta en BD, actualización de semáforos y control de descargas.
+
+INSTRUCCIONES PARA COPILOT
+1) Analiza el proyecto y ubica los módulos/páginas/handlers relacionados con:
+   - Metas Colectivas (captura, carga firmadas, descarga Excel)
+   - Metas Individuales (captura y evaluación)
+   - Autoevaluación Gerencial (captura evaluado, validación superior, guardado de respuestas/calificación)
+   - Aportaciones Destacadas y Actividades Extraordinarias (CRUD, validación, semáforos)
+   - Descarga de Cédula de Evaluación (botón/endpoint, validaciones previas)
+
+2) Implementa lo siguiente (por sección) SIN romper flujos actuales y manteniendo consistencia de estatus y periodos (2025/2026). Donde aplique, agrega validaciones server-side y client-side y mensajes claros.
+
+=====================================================
+A) METAS COLECTIVAS (PERIODO 2026)
+=====================================================
+A1. Captura múltiple de metas
+- Corregir restricción que impide registrar más de 1 Meta Colectiva en el periodo 2026.
+- Permitir cargar N metas (las que decida el responsable) para cada periodo, siempre y cuando no se exceda el 100% en la ponderación.
+- Validación: la suma de ponderaciones (o porcentaje) de todas las metas colectivas del usuario/UA/periodo debe ser EXACTAMENTE 100%.
+  - En alta/edición: impedir guardar si al final excede 100% o si queda <100% cuando intente “Finalizar/Completar” (si existe ese flujo).
+  - Mostrar al usuario la suma actual y cuánto falta.
+
+A2. Descarga Excel condicionada a 100%
+- En “Descarga de Metas Colectivas”, bloquear la descarga del Excel si NO se cuenta con el 100% en la ponderación de metas capturadas para el periodo actual.
+- La validación debe ser server-side (antes de generar el Excel) y opcionalmente también UI (deshabilitar botón).
+
+A3. Carga de Metas Colectivas firmadas
+- Corregir para que el responsable SÍ pueda realizar la carga del archivo firmado.
+- Validar:
+  - Tipo de archivo (PDF)
+  - Tamaño máximo razonable
+  - Que exista relación con periodo y UA
+- Guardar ruta, nombre, fecha de carga y usuario que cargó.
+- Mostrar estado “Firmadas cargadas” cuando aplique.
+
+=====================================================
+B) METAS INDIVIDUALES (PERIODO DE CAPTURA Y EVALUACIÓN)
+=====================================================
+B1. Bloqueo definitivo tras carga firmada + finalizar
+- Una vez que el evaluado cargue sus metas individuales firmadas, debe “Finalizar la carga”.
+- Al finalizar, debe BLOQUEARSE:
+  - edición
+  - eliminación
+  - alta de nuevas metas
+- Esto debe ocurrir independientemente de si el sistema está en periodo de captura o de evaluación.
+- Implementar un estatus/flag persistente en BD (por usuario/periodo) que indique “carga finalizada” y que sea la fuente de verdad para bloquear.
+- Validación server-side: si flag=finalizado, rechazar POST de crear/editar/eliminar.
+
+=====================================================
+C) METAS INDIVIDUALES (PERIODO DE EVALUACIÓN)
+=====================================================
+C1. Reflejo de resultados al evaluado
+- Una vez que el superior jerárquico valide o modifique el resultado/calificación de metas individuales, ese resultado debe reflejarse al evaluado en su apartado de “resultado”.
+- Asegurar que:
+  - Se guarden en BD las calificaciones finales del superior
+  - Se consulten desde la vista del evaluado usando la calificación final (no la propuesta del evaluado)
+- Si hay caché o tablas de resumen, actualizarlas al cerrar/guardar evaluación.
+
+=====================================================
+D) AUTOEVALUACIÓN GERENCIAL
+=====================================================
+D1. Corregir fatal error al Guardar (evaluado)
+- Al usuario evaluado, al dar “Guardar” en Autoevaluación Gerencial, aparece “fatal error”.
+- Diagnosticar la causa (variable indefinida, query inválida, columna faltante, null, etc.) y corregir.
+- Asegurar respuesta controlada (try/catch, manejo de errores) y mensaje amigable.
+
+D2. Visibilidad para Superior Jerárquico
+- Después de que el evaluado guarde, el superior jerárquico debe poder visualizar la autoevaluación.
+- Confirmar permisos, filtros por periodo, y relación jefe-evaluado.
+
+D3. Guardado de respuestas del Superior (y calificación final)
+- Actualmente como superior se permite evaluar, se ve la calificación asignada, pero NO se guardan las respuestas dadas a la autoevaluación del usuario.
+- Implementar persistencia completa:
+  - Guardar respuestas del superior por pregunta/criterio (si aplica)
+  - Guardar calificación final validada por el superior
+  - Guardar fecha/hora y usuario validador
+
+D4. Bloqueo de edición tras finalizar superior
+- Verificar que el superior jerárquico pueda validar o modificar la propuesta una vez.
+- Después de “Finalizar” (o acción equivalente), ya NO se podrá modificar.
+- La calificación que cuenta es la validada por el superior.
+- Debe reflejarse en el avance de los semáforos correspondientes.
+
+D5. Restricción por periodo
+- La autoevaluación gerencial solo se puede realizar en un periodo de evaluación (no en captura).
+- Implementar validación por estatus del periodo.
+
+D6. Corregir que NO se guarda la calificación (bug actual)
+- Corregir el flujo para que siempre se guarde en BD la calificación de Autoevaluación Gerencial (evaluado y/o superior según diseño), y que la calificación final sea la del superior.
+- Asegurar integridad referencial (usuario, periodo, jefe, timestamps).
+
+=====================================================
+E) APORTACIONES DESTACADAS Y ACTIVIDADES EXTRAORDINARIAS
+=====================================================
+E1. Semáforo y sumatoria incorrecta tras eliminar
+- Problema: al eliminar Actividades Extraordinarias y Aportaciones Destacadas, el semáforo del usuario sigue como “Validadas” y al superior siguen apareciendo como “Evaluadas” y se conserva la sumatoria (+1, +2).
+- Solución:
+  - Al eliminar registros, recalcular:
+    - estatus del semáforo (debe pasar a “Sin registros” o “En captura”, según reglas)
+    - puntaje/sumatoria correspondiente
+  - Asegurar que la vista del superior y del evaluado reflejen el nuevo estado.
+  - Si hay tablas de agregados, actualizar o recalcular.
+
+E2. Edición/eliminación durante Evaluación hasta que valide el superior
+- En periodo de Evaluación, el usuario evaluado debe poder editar/eliminar Actividades Extraordinarias y Aportaciones Destacadas mientras NO estén validadas por el superior.
+- Una vez que el superior las valide, bloquear edición/eliminación.
+- Implementar un flag “validado_por_superior” por registro y validación server-side.
+
+E3. Eliminar botón “Terminar” en Actividades Extraordinarias
+- Quitar el botón “Terminar” en Actividades Extraordinarias.
+- Manejar mecanismo similar a Aportaciones Destacadas:
+  - registros editables hasta validación
+  - al validar, quedan bloqueados
+
+=====================================================
+F) DESCARGA DE CÉDULA DE EVALUACIÓN
+=====================================================
+F1. Botón/sección de descarga
+- Agregar una sección o botón visible para descargar la Cédula de Evaluación, actualmente el botón esta escondido, lo mejor es que se vea, pero que esté deshabilitado.
+
+F2. Reglas para habilitar descarga
+- Para descargar la cédula es requisito que estén calificados:
+  - Metas Individuales
+  - Metas Colectivas
+  - Autoevaluación Gerencial
+- NO debe ser requisito contar con registros/validación de:
+  - Capacitación
+  - Actividades Extraordinarias
+  - Aportaciones Destacadas
+- Al descargar, reflejar SOLO las calificaciones que existan y correspondan (no inventar valores).
+
+F3. Validaciones
+- Implementar validación server-side antes de generar la cédula:
+  - si falta alguna de las 3 secciones obligatorias, rechazar con mensaje claro indicando qué falta.
+- Asegurar que la cédula muestre periodo correcto (2025/2026 según corresponda) y los resultados finales.
+
+=====================================================
+REQUERIMIENTOS TRANSVERSALES
+=====================================================
+- Toda validación crítica debe ser server-side (no solo UI).
+- Ajustar consultas por periodo (2025/2026) y por permisos de usuario.
+- Al cambiar estatus o eliminar registros, recalcular semáforos/avances y totales para evitar inconsistencias.
+- Agregar logs en bitácora (si existe) cuando:
+  - se finaliza carga de metas individuales
+  - se valida/finaliza autoevaluación gerencial
+  - se cargan metas colectivas firmadas
+  - se elimina/edita actividad o aportación con impacto en puntaje
+
+ENTREGABLES ESPERADOS
+- Código actualizado en módulos correspondientes.
+- Migraciones SQL si se requieren nuevos campos/flags (ej: carga_finalizada_metas_ind, validado_por_superior, rutas de archivos firmados, etc.).
+- Pruebas rápidas manuales (checklist) por flujo:
+  1) Metas colectivas: crear varias, sumar 100, descargar excel solo con 100, subir firmadas.
+  2) Metas individuales: cargar firmadas, finalizar, bloquear CRUD.
+  3) Evaluación metas individuales: superior modifica y evaluado ve resultado.
+  4) Autoevaluación: evaluado guarda sin fatal error, superior ve, superior responde, se guarda, finaliza y bloquea.
+  5) Actividades/aportaciones: eliminar y verificar semáforo/puntos; editar durante evaluación hasta validar; sin botón terminar.
+  6) Cédula: aparece botón, descarga solo si 3 secciones obligatorias están calificadas.
+
+Fuente de requerimientos:
+Documento de comentarios del SED (04.02.2026).

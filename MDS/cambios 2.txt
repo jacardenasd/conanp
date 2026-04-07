@@ -1,0 +1,79 @@
+Contexto general:
+Sistema: Sistema de Evaluación del Desempeño (SED)
+Periodo: Evaluación 2025 y Captura de Metas 2026
+Lenguaje: PHP + MySQL
+Objetivo: Ajustar reglas de negocio, flujos, validaciones y visibilidad de secciones conforme a los requerimientos funcionales descritos abajo.
+No alterar la lógica existente fuera de los puntos indicados.
+
+========================
+1. SECCIÓN CAPACITACIÓN
+========================
+- Bloquear completamente la sección de Capacitación.
+- No debe estar visible ni accesible para ningún tipo de usuario.
+- Si existe navegación directa por URL, validar permisos y redirigir o mostrar acceso denegado.
+
+========================
+2. METAS COLECTIVAS
+========================
+- Bloquear la opción de “Consulta de Metas Colectivas” a usuarios que NO tengan atribuciones para evaluar Metas Colectivas.
+- Esta restricción debe aplicar tanto para el periodo 2025 como 2026.
+- Considerar que solo las personas titulares de Unidades Administrativas pueden evaluar Metas Colectivas.
+- Validar y corregir la información mostrada en la cédula de descarga de Metas Colectivas.
+- Permitir al responsable la carga de Metas Colectivas firmadas (actualmente no lo permite).
+
+========================
+3. METAS INDIVIDUALES – PERIODO DE CARGA
+========================
+- Habilitar el botón “Finalizar” inmediatamente después de que el usuario cargue las Metas Individuales firmadas.
+- El botón debe validar que el archivo firmado exista antes de permitir finalizar.
+
+========================
+4. APORTACIONES DESTACADAS Y ACTIVIDADES EXTRAORDINARIAS
+========================
+- Al agregar una Actividad Extraordinaria, mostrar automáticamente un campo/recuadro para capturar una Aportación Destacada asociada.
+- Corregir el texto que actualmente dice “aportación destacada por actividad extraordinaria” por un texto claro y correcto.
+- Mantener relación lógica entre actividad extraordinaria y aportación destacada.
+
+========================
+5. METAS INDIVIDUALES – PERIODO DE EVALUACIÓN
+========================
+- Cuando el usuario evaluado proponga su calificación y haga clic en “Terminar”, el botón debe desaparecer o quedar deshabilitado permanentemente.
+- Evitar que el botón “Terminar” vuelva a habilitarse después de que el superior jerárquico evalúe.
+- Corregir el bug donde al volver a presionar “Terminar” se reinicia el estatus de evaluación y se genera un bucle.
+- Una vez que el superior jerárquico concluya la evaluación, las calificaciones finales deben reflejarse correctamente al usuario evaluado.
+
+========================
+6. AUTOEVALUACIÓN GERENCIAL – PERIODO DE EVALUACIÓN
+========================
+- Permitir que el usuario evaluado guarde su propuesta de autoevaluación gerencial.
+- Después de guardar, NO permitir modificaciones por parte del usuario evaluado.
+- Permitir que el superior jerárquico valide o modifique la propuesta.
+- Una vez que el superior jerárquico finalice, la calificación no debe poder modificarse.
+- La calificación válida es exclusivamente la autorizada por el superior jerárquico.
+- Esta calificación debe reflejarse en los semáforos de avance correspondientes.
+- La autoevaluación gerencial solo puede realizarse dentro de un único periodo de evaluación.
+- Corregir el error actual donde la calificación de Autoevaluación Gerencial no se guarda en base de datos.
+
+========================
+7. DESCARGA DE CÉDULA DE EVALUACIÓN
+========================
+- Agregar un botón o sección visible para descargar la Cédula de Evaluación.
+- Reglas para habilitar la descarga:
+  - Deben estar evaluadas:
+    - Metas Individuales
+    - Metas Colectivas
+    - Autoevaluación Gerencial
+  - No es obligatorio que existan registros de:
+    - Capacitación
+    - Actividades Extraordinarias
+    - Aportaciones Destacadas
+- Al descargar la Cédula, solo deben reflejarse las calificaciones que sí existan y estén evaluadas.
+- No bloquear la descarga por secciones opcionales sin calificación.
+
+========================
+Notas finales
+========================
+- Mantener consistencia de estatus en base de datos.
+- Evitar regresiones en periodos ya cerrados.
+- Respetar reglas de permisos por rol y periodo.
+- Priorizar integridad del flujo: Captura → Evaluación → Cierre → Descarga.

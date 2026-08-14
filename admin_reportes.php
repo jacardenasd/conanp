@@ -41,6 +41,8 @@ $query_capacitacion = http_build_query([
 	'trimestre' => $ltrimestre
 ]);
 
+$query_evaluaciones = http_build_query(['periodo' => $lperiodo, 'unidad_id' => $lunidad_id]);
+
 $disabled_periodo = empty($lperiodo) ? ' disabled' : '';
 $disabled_unidad = (empty($lperiodo) || empty($lunidad_id)) ? ' disabled' : '';
 $disabled_usuario = (empty($lperiodo) || empty($luser_id)) ? ' disabled' : '';
@@ -291,6 +293,12 @@ if (!empty($ltrimestre) && isset($trimestres[(int)$ltrimestre])) {
 				<div class="fs-sm text-muted mt-1"><?= htmlspecialchars($msg_metas_usuario) ?></div>
 			<?php endif; ?>
     </div>
+	<div class="col-md-3">
+			<a href="generar_excel_evaluaciones_periodo.php?<?= htmlspecialchars($query_evaluaciones) ?>" class="btn btn-outline-success w-100<?= $disabled_periodo ?>"<?= empty($lperiodo) ? ' aria-disabled="true" tabindex="-1"' : '' ?>>📄 Evaluaciones por periodo</a>
+			<?php if ($disabled_periodo !== ''): ?>
+				<div class="fs-sm text-muted mt-1"><?= htmlspecialchars($msg_metas_individuales) ?></div>
+			<?php endif; ?>
+	</div>
     <div class="col-md-3">
 			<a href="reporte_cedula_resultados.php?<?= htmlspecialchars($query_individual) ?>" class="btn btn-outline-success w-100<?= $disabled_usuario ?>"<?= (empty($lperiodo) || empty($luser_id)) ? ' aria-disabled="true" tabindex="-1"' : '' ?>>📄 Cédula de resultados</a>
 			<?php if ($msg_metas_usuario !== ''): ?>

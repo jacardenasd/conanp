@@ -173,10 +173,11 @@ foreach ($metas as $meta) {
     $ws->setCellValue("R$fila", normalizar_texto_excel($meta['sobresaliente'], true));
     $ws->setCellValue("S$fila", normalizar_texto_excel($meta['satisfactorio'], true));
     $ws->setCellValue("T$fila", normalizar_texto_excel($meta['no_satisfactorio'], true));
-    $ws->setCellValue("U$fila", normalizar_texto_excel($meta['deficiente'], true));
+    $ws->setCellValue("U$fila", normalizar_texto_excel($meta['no_aprobatorio'], true));
+    $ws->setCellValue("V$fila", normalizar_texto_excel($meta['deficiente'], true));
 
     // Aplicar estilos desde la fila 5
-    for ($col = 'A'; $col <= 'U'; $col++) {
+    for ($col = 'A'; $col <= 'V'; $col++) {
         $ws->duplicateStyle($ws->getStyle("{$col}7"), "{$col}{$fila}");
     }
 

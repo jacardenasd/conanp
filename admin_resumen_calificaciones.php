@@ -204,9 +204,12 @@ function sort_icon(string $column, string $currentSort, string $currentDir): str
 
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <span class="text-muted">Mostrando <?= count($registros) ?> de <?= $total_registros ?> personas</span>
-                            <?php if ($q !== '' || $unidad_id !== '' || $periodo !== $periodo_default): ?>
-                                <a href="admin_resumen_calificaciones.php" class="btn btn-light btn-sm">Limpiar filtros</a>
-                            <?php endif; ?>
+                            <div class="btn-group">
+                                <a href="generar_excel_resumen_calificaciones.php?<?= htmlspecialchars(http_build_query(['periodo'=>$periodo,'unidad_id'=>$unidad_id,'q'=>$q])) ?>" class="btn btn-danger btn-sm">Descargar Excel</a>
+                                <?php if ($q !== '' || $unidad_id !== '' || $periodo !== $periodo_default): ?>
+                                    <a href="admin_resumen_calificaciones.php" class="btn btn-light btn-sm">Limpiar filtros</a>
+                                <?php endif; ?>
+                            </div>
                         </div>
 
                         <div class="table-responsive">

@@ -1,10 +1,10 @@
 <?php
 $host = '127.0.0.1';
 $dbname = 'evaluacion_conanp';
-//$username = 'jacardenasd';
-//$password = 'Card3n4x!Dom';
-$username = 'root';
-$password = '';
+//$username = 'Demo';
+//$password = 'Demo';
+$username = 'Demo';
+$password = 'Demo';
 
 
 try {
